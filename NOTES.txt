@@ -5,3 +5,12 @@ sudo CFLAGS=-Qunused-arguments CPPFLAGS=-Qunused-arguments pip install ansible
 bin/kafka-topics.sh --list --zookeeper 192.168.33.10:2181
 bin/kafka-console-producer.sh --broker-list 192.168.33.10:9092 --topic test
 bin/kafka-console-consumer.sh --zookeeper 192.168.33.10:2181 --topic test --from-beginning
+
+# run some ansible by hand
+ansible all -u vagrant -i hosts -m setup --private-key=~/.vagrant.d/insecure_private_key 
+
+# there were problems on my work mac where i couldn't connect from my local machine 
+# to kafka running on the VM; here is one solution:
+# http://biomedicalontologies.com/2012/11/14/fixing-java-net-local-host-name-unknown-error-on-mac-os-x/
+# the other solution is to add host name (which is the name of my laptop as configured 
+# by the tgt people, I get it with 'scutil --get HostName' to /etc/hosts as alias for localhost.
