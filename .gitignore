@@ -1,0 +1,15 @@
+.DS_Store
+*.pyc
+*.pyo
+.vagrant/
+
+*.log
+*.tab
+*.sql
+*.txt
+*.csv
+*.zip
+*.xml
+*.old
+
+!README.txt

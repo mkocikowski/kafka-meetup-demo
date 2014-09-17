@@ -1,0 +1,99 @@
+---
+
+- name: configure kafka node
+  hosts: all
+  sudo: true  
+
+  vars:
+    K_VERSION: 0.8.1.1
+    K_BUILD: kafka_2.9.2-{{K_VERSION}}
+    K_DATA_DIR: /var/data/kafka
+    Z_VERSION: 3.4.6
+    Z_BUILD: zookeeper-{{Z_VERSION}}
+    Z_DATA_DIR: /var/data/zookeeper
+  
+  tasks:
+
+  - name: disable garbage
+    service: name={{ item }} state=stopped enabled=no
+    with_items:
+      - chef-client
+      - puppet
+
+  - name: update all packages to the latest version
+    apt: upgrade=dist
+
+  - name: install base packages
+    apt: name={{ item }} state=latest update_cache=yes cache_valid_time=3600
+    with_items:
+      - vim
+      - openjdk-7-jre-headless
+
+  
+  - name: create group "zoo"
+    group: name=zoo state=present
+
+  - name: create user "zoo"
+    user: name=zoo group=zoo 
+
+  - name: download the zookeeper tarball
+    get_url: url=http://apache.mirrors.pair.com/zookeeper/current/{{Z_BUILD}}.tar.gz dest=/tmp/{{Z_BUILD}}.tar.gz mode=0644 owner=zoo group=zoo
+
+  - name: untar the zookeeper tarball
+    sudo_user: zoo
+    unarchive: src=/tmp/{{Z_BUILD}}.tar.gz dest=/home/zoo/ copy=no
+    
+  - name: symlink zoo dir to "current"
+    file: src=/home/zoo/{{Z_BUILD}} dest=/home/zoo/current owner=zoo group=zoo state=link
+    
+  - name: make sure zookeeper data directory exists
+    file: path={{Z_DATA_DIR}} state=directory mode=0755 owner=zoo group=zoo
+
+  - name: template zookeeper config
+    template: src=files/zoo.cfg dest=/home/zoo/current/conf/zoo.cfg force=yes mode=0644 owner=zoo group=zoo
+
+  - name: template the zookeeper init.d script
+    template: src=files/initd-zookeeper dest=/etc/init.d/zookeeper mode=0755 force=yes
+
+  - name: start zookeeper service
+    service: name=zookeeper state=restarted enabled=yes
+
+  - name: wait for zookeeper to come up
+    wait_for: port=2181
+
+
+
+  - name: create group "kafka"
+    group: name=kafka state=present
+
+  - name: create user "kafka"
+    user: name=kafka group=kafka 
+
+  - name: download the kafka tarball
+    get_url: url=http://www.trieuvan.com/apache/kafka/{{K_VERSION}}/{{K_BUILD}}.tgz dest=/tmp/{{K_BUILD}}.tgz mode=0644 owner=kafka group=kafka
+
+  - name: untar the kafka tarball
+    sudo_user: kafka
+    unarchive: src=/tmp/{{K_BUILD}}.tgz dest=/home/kafka/ copy=no
+    
+  - name: symlink kafka dir to "current"
+    file: src=/home/kafka/{{K_BUILD}} dest=/home/kafka/current owner=kafka group=kafka state=link
+
+  - name: make sure kafka data directory exists
+    file: path={{K_DATA_DIR}} state=directory mode=0755 owner=kafka group=kafka
+
+  - name: template kafka config
+    template: src=files/server.properties dest=/home/kafka/current/config/server.properties force=yes mode=0644 owner=kafka group=kafka
+
+  - name: copy the kafka init.d script
+    copy: src=files/initd-kafka dest=/etc/init.d/kafka mode=0755 force=yes
+
+  - name: start kafka service
+    service: name=kafka state=restarted enabled=yes
+    
+  - name: wait for kafka to come up
+    wait_for: port=9092
+
+  - name: create "test" topic
+    command: /home/kafka/current/bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic test
+

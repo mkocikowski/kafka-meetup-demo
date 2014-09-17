@@ -1,0 +1,7 @@
+# installing ansible for osx mavericks
+sudo CFLAGS=-Qunused-arguments CPPFLAGS=-Qunused-arguments pip install ansible
+
+# things to try with kafka
+bin/kafka-topics.sh --list --zookeeper 192.168.33.10:2181
+bin/kafka-console-producer.sh --broker-list 192.168.33.10:9092 --topic test
+bin/kafka-console-consumer.sh --zookeeper 192.168.33.10:2181 --topic test --from-beginning
